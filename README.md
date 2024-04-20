@@ -64,7 +64,7 @@ Follow these steps to set up the Chat Bot App locally:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/Eli-Nori/sepana-task-Faisal.git
+   https://github.com/Faisal-Sey/Mini-Chat-GPT.git
    ```
 
 2. Navigate to the backend directory:
