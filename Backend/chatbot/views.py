@@ -1,13 +1,58 @@
+import random
+import time
+from threading import Thread
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 from chatbot.models import ChatHistory, ChatSession
 
 session_not_existing = "Session does not exist"
+
+
+def datetime_to_string(datetime_obj):
+    return datetime_obj.strftime('%Y-%m-%d %H:%M:%S') if datetime_obj else ""
+
+
+def get_weighted_chunk_length(remaining_length):
+    possible_lengths = list(range(1, remaining_length + 1))
+    weights = [1 / length for length in possible_lengths]
+    normalized_weights = [weight / sum(weights) for weight in weights]
+    return random.choices(possible_lengths, weights=normalized_weights, k=1)[0]
+
+
+def send_websocket_messages(session_id, chat_history_info, question):
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        start = 0
+
+        while start < len(question):
+            remaining_length = len(question) - start
+            chunk_length = get_weighted_chunk_length(remaining_length)
+            chunk = question[0:start]
+
+            start += chunk_length
+
+            async_to_sync(channel_layer.group_send)(
+                f'chat_{session_id}',
+                {
+                    'type': 'chat_message',
+                    'message': {
+                        **chat_history_info,
+                        "response": chunk
+                    }
+                }
+            )
+
+            time.sleep(0.2)
+    else:
+        print("Channel layer is not configured properly.")
 
 
 class CreateChatMessageView(APIView):
@@ -15,7 +60,6 @@ class CreateChatMessageView(APIView):
     authentication_classes = (JWTAuthentication,)
 
     def post(self, request, *args, **kwargs):
-        # retrieve user
         user = self.request.user
         question = request.data.get('question')
         session_id = request.data.get('session_id')
@@ -23,27 +67,25 @@ class CreateChatMessageView(APIView):
 
         session = None
 
-        # check if session id exists
         if session_id is not None:
             try:
-                ChatSession.objects.get(id=session_id)
+                session = ChatSession.objects.get(id=session_id)
             except ObjectDoesNotExist:
                 resp_data = {'status': 'error', "response": session_not_existing}
                 return Response(resp_data, status=400)
         else:
-            # create session
             session = ChatSession.objects.create(user=user, name=question.lower())
             session_id = session.id
             is_first_question = True
 
-        # chat history information
+        response_text = f"Here is your response: {question[::-1]}"
+
         chat_history_info = {
             "session_id": session_id,
             "question": question,
-            "response": question
+            "response": f"Here is your response: {question[::-1]}"
         }
 
-        # save chat history
         chat_history = ChatHistory.objects.create(**chat_history_info)
 
         if is_first_question:
@@ -52,13 +94,17 @@ class CreateChatMessageView(APIView):
                 "id": session.id,
                 "user_id": session.user.id,
                 "name": session.name,
-                "created_on": session.created_on,
-                "updated_on": session.updated_on
+                "created_on": datetime_to_string(session.created_on),
+                "updated_on": datetime_to_string(session.updated_on)
             }
 
-        chat_history_info["created_on"] = chat_history.created_on
+        chat_history_info["created_on"] = datetime_to_string(chat_history.created_on)
         chat_history_info["id"] = chat_history.id
-        chat_history_info["updated_on"] = chat_history.updated_on
+        chat_history_info["updated_on"] = datetime_to_string(chat_history.updated_on)
+
+        thread = Thread(target=send_websocket_messages, args=(session_id, chat_history_info, response_text))
+        thread.daemon = True
+        thread.start()
 
         return JsonResponse({'status': 'success', "data": chat_history_info}, safe=False)
 

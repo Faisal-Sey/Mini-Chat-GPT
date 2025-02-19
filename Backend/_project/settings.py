@@ -47,7 +47,9 @@ INSTALLED_APPS = [
     # external libraries
     "rest_framework",
     "rest_framework_simplejwt",
-    "corsheaders"
+    "corsheaders",
+    "channels",
+    "daphne"
 ]
 
 MIDDLEWARE = [
@@ -79,7 +81,19 @@ TEMPLATES = [
     },
 ]
 
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",  # For development
+        # "BACKEND": "channels_redis.core.RedisChannelLayer",  # For production
+        # "CONFIG": {
+        #     "hosts": [("127.0.0.1", 6379)],  # Redis server address
+        # },
+    },
+}
+
 WSGI_APPLICATION = "_project.wsgi.application"
+ASGI_APPLICATION = "_project.asgi.application"
 
 
 # Database

@@ -95,13 +95,13 @@ const Sidebar = ({id}) => {
 
     return (
         <>
-            <div className="bg-gray-900 text-white w-64 h-screen p-4 flex flex-col justify-between">
+            <div className="bg-gray-900 text-white w-3/12 h-screen p-4 flex flex-col justify-between">
                 <div>
                     <ul className="space-y-4 border-2" onClick={() => navigate("/sessions")}>
                         <li className="hover:bg-gray-700 px-2 py-1 rounded cursor-pointer text-center">+ New Chat</li>
                     </ul>
                     <div className="mt-4">
-                        {sessions.map((session, index) =>
+                        {sessions?.map((session, index) =>
                             <div
                                 className={`flex ${(Number(id) === session.id) && "bg-gray-700"} items-center justify-between mb-2 px-2 py-1 rounded cursor-pointer text-center`}
                                 onClick={() => navigate(`/sessions/${session.id}`)}
