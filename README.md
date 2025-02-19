@@ -105,18 +105,13 @@ Follow these steps to set up the Chat Bot App locally:
 2. Install Node.js dependencies:
 
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Start the React development server:
 
    ```bash
-   npm start
+   pnpm run dev
    ```
 4. Configure frontend environment variables, such as backend URL, in `.env` or through your preferred method.
 
-### API Documentation
-
-You can find the API documentation for this project in the [Postman Collection](https://documenter.getpostman.com/view/12600570/2s9YBxYFc7) provided.
-
-[![Run in Postman](https://run.pstmn.io/button.svg)](https://documenter.getpostman.com/view/12600570/2s9YBxYFc7)
