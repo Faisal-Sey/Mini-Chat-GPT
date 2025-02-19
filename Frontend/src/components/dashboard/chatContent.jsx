@@ -1,12 +1,11 @@
-import React, {useEffect, useRef, useState} from "react";
-import {BsSend} from "react-icons/bs";
-import {axiosClientWithHeaders} from "../../libs/axiosClient.js";
-import {formatDate} from "../../utils/helpers.js";
-import {useDispatch, useSelector} from "react-redux";
-import {setQuestionsData, updateQuestionsData} from "../../redux/slices/questionsSlice.js";
-import {useNavigate} from "react-router-dom";
-import {updateSessionsData} from "../../redux/slices/sessionsSlice.js";
-
+import React, { useEffect, useRef, useState } from "react";
+import { BsSend } from "react-icons/bs";
+import { axiosClientWithHeaders } from "../../libs/axiosClient.js";
+import { formatDate } from "../../utils/helpers.js";
+import { useDispatch, useSelector } from "react-redux";
+import { setQuestionsData, updateQuestionsData } from "../../redux/slices/questionsSlice.js";
+import { useNavigate } from "react-router-dom";
+import { updateSessionsData } from "../../redux/slices/sessionsSlice.js";
 
 function ChatContent({ id }) {
     const questions = useSelector((state) => state.questions.questions);
@@ -16,6 +15,26 @@ function ChatContent({ id }) {
     const navigate = useNavigate();
     const containerRef = useRef(null);
 
+    useEffect(() => {
+        if (id) {
+            getMessages();
+            const ws = new WebSocket(`ws://${import.meta.env.VITE_APP_BACKEND_DOMAIN_WEBSOCKET}/ws/chat/${id}/`);
+            ws.onopen = () => {
+                console.log("WebSocket connected");
+            };
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                dispatch(updateQuestionsData(data.message));
+            };
+            ws.onerror = (err) => {
+                console.log("WebSocket error");
+            }
+            ws.onclose = () => {
+                console.log("WebSocket disconnected");
+            };
+        }
+    }, [id]);
+
     const getMessages = async () => {
         try {
             const resp = await axiosClientWithHeaders.get(`chat/sessions/${id}`);
@@ -23,12 +42,12 @@ function ChatContent({ id }) {
         } catch (error) {
             console.error(error);
         }
-    }
+    };
 
     const saveMessage = async () => {
         const data = {
             question,
-        }
+        };
         if (id) {
             data.session_id = id;
         }
@@ -42,19 +61,19 @@ function ChatContent({ id }) {
             delete respData.session;
             delete respData?.name;
 
-            dispatch(updateQuestionsData(resp.data.data));
+            // dispatch(updateQuestionsData(resp.data.data));
             if (sessionName) {
                 dispatch(updateSessionsData(sessionData));
-                navigate(`/sessions/${respData.session_id}`)
+                navigate(`/sessions/${respData.session_id}`);
             }
         } catch (error) {
             console.error(error);
         }
-    }
+    };
 
     const scrollToBottom = () => {
         containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
+    };
 
     const handleKeyPress = async (e) => {
         if (e.code === 'Enter' && question.trim() !== '') {
@@ -63,19 +82,13 @@ function ChatContent({ id }) {
     };
 
     useEffect(() => {
-        if (id) {
-            getMessages();
-        }
-    }, [id]);
-
-    useEffect(() => {
         scrollToBottom();
     }, [questions]);
 
     return (
-        <div className="flex-grow flex flex-col justify-between p-4 bg-[#3A4454]">
+        <div className="flex flex-col w-9/12 justify-between p-4 bg-[#3A4454]">
             <div className="flex items-center flex-col h-[88vh] overflow-auto" ref={containerRef}>
-                {!id &&  <p className="text-center w-full text-white">New Chat</p>}
+                {!id && <p className="text-center w-full text-white">New Chat</p>}
                 {id && questions.map((question, index) =>
                     <div className="w-full flex flex-col" key={index}>
                         <div className="flex flex-col bg-[#53687E] text-white p-4">
@@ -93,14 +106,14 @@ function ChatContent({ id }) {
                         placeholder="Send question"
                         value={question}
                         onChange={(e) => setQuestion(e.target.value)}
-                        className="w-full focus-visible:outline-none bg-inherit text-white"
+                        className="w-full focus-visible:outline-none bg-inherit text-white mr-4"
                         onKeyDown={handleKeyPress}
                     />
                     <BsSend size={20} className="cursor-pointer text-white" onClick={saveMessage} />
                 </div>
             </div>
         </div>
-    )
+    );
 }
 
 export default ChatContent;

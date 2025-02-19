@@ -15,7 +15,7 @@ export const questionsSlice = createSlice({
       const questionData = { ...action.payload };
       questionData.session_id = Number(questionData.session_id);
 
-      state.questions = [...state.questions, questionData];
+      state.questions = [...state.questions.filter((question) => question.id !== questionData.id), questionData];
     },
     deleteQuestionsData: (state, action) => {
         const { id } = action.payload;
